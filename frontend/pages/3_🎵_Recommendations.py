@@ -4,135 +4,200 @@ Hybrid Recommendation System Page
 import streamlit as st
 from utils.api_client import APIClient
 import pandas as pd
+from streamlit_agraph import agraph, Node, Edge, Config
 
-st.set_page_config(page_title="Recommendations", page_icon="🎵", layout="wide")
+st.set_page_config(page_title="Discovery", page_icon="🔭", layout="wide")
 
-# Initialiser API client
+# Init API
 if 'api_client' not in st.session_state:
     st.session_state.api_client = APIClient()
 
 api = st.session_state.api_client
 
-st.title("🎵 Hybrid Music Recommendation System")
-st.markdown("Combining **Neo4j graph relationships** with **MongoDB audio similarity**")
+st.title("🔭 Music Discovery Engine")
+st.markdown("Explore the *Music Knowledge Graph* by selecting your favorite genres and artists.")
 
-# Méthode de recherche
-st.subheader("🔎 Find a Track to Start")
+# Helper functions with Caching
+@st.cache_data(ttl=3600)
+def load_all_genres():
+    return api.get_all_genres()
 
-search_query = st.text_input("Search for a track or artist", placeholder="e.g., Imagine Dragons, Radioactive...")
+@st.cache_data(ttl=3600)
+def load_artists_for_genre(genre):
+    return api.get_artists_by_genre(genre)
 
-if search_query:
-    with st.spinner("Searching tracks..."):
-        search_results = api.search_tracks(search_query, limit=10)
+@st.cache_data(ttl=3600)
+def load_evolution_data():
+    return api.get_genre_evolution()
+
+# Initial Data Load
+with st.spinner("Loading knowledge base..."):
+    all_genres = load_all_genres()
+    # Pre-fetch evolution data for years list
+    evolution_data = load_evolution_data()
+    if evolution_data and 'error' not in evolution_data:
+        all_years = sorted(list(set(d['year'] for d in evolution_data)), reverse=True)
+    else:
+        all_years = list(range(2024, 1950, -1))
+
+if not all_genres or 'error' in all_genres:
+    st.error("Could not connect to Knowledge Graph. Please ensure backend is running.")
+    st.stop()
+
+# --- FILTERS SECTION ---
+with st.container():
+    st.subheader("1. define your scope")
     
-    if 'error' not in search_results and search_results:
-        st.success(f"Found {len(search_results)} tracks")
+    st.markdown("##### 🏷️ Select Genres")
+    # Genres as Pills
+    selected_genres = st.pills(
+        "Genres",
+        all_genres,
+        selection_mode="multi",
+        key="genre_pills"
+    )
+    
+    # Load artists dynamically based on genre selection
+    if selected_genres:
+        # Union of artists from selected genres
+        available_artists = set()
+        for g in selected_genres:
+            artists = load_artists_for_genre(g)
+            if artists and 'error' not in artists:
+                available_artists.update(artists)
+        artist_options = sorted(list(available_artists))
+    else:
+        artist_options = []
+
+    if artist_options:
+        st.markdown("##### 🎤 Select Artists")
+        # Artists as Pills (Limit to top 50 to avoid clutter, or use multiselect if too many)
+        if len(artist_options) > 50:
+            st.caption(f"Found {len(artist_options)} artists. Showing top 50.")
+            selected_artists = st.pills(
+                "Artists",
+                artist_options[:50], 
+                selection_mode="multi",
+                key="artist_pills"
+            )
+        else:
+            selected_artists = st.pills(
+                "Artists",
+                artist_options,
+                selection_mode="multi",
+                key="artist_pills"
+            )
+    else:
+        selected_artists = []
+
+    st.markdown("##### 📅 Select Years")
+    # Years as Pills (Grouped or just list)
+    # Filter years to reasonable recent usage or all
+    selected_years = st.pills(
+        "Years",
+        all_years[:30], # Top 30 recent years?
+        selection_mode="multi",
+        key="year_pills"
+    )
+    if len(all_years) > 30:
+        st.caption("Showing most recent years. Use backend for fuller history.")
+
+# --- VISUALIZATION SECTION ---
+if selected_genres and selected_artists:
+    st.divider()
+    st.subheader("2. visualize connections")
+    
+    with st.spinner("Building network graph..."):
+        network_data = api.get_network_advanced(selected_genres, selected_artists)
+    
+    if network_data and network_data.get('nodes'):
+        # Build AGraph
+        nodes = []
+        edges = []
         
-        # Sélection de track
-        df_search = pd.DataFrame(search_results)
-        
-        # Display search results
-        selected_idx = st.selectbox(
-            "Select a track",
-            range(len(df_search)),
-            format_func=lambda i: f"{df_search.iloc[i]['track']} - {df_search.iloc[i]['artist']} ({df_search.iloc[i].get('year', 'N/A')})"
+        # Add Nodes
+        for n in network_data['nodes']:
+            color = "#FF4B4B" if n['type'] == 'artist' else "#1DB954" # Red for Artist, Green for Genre
+            nodes.append(Node(
+                id=n['id'], 
+                label=n['label'], 
+                size=15, # Smaller nodes for performance
+                color=color,
+                symbolType="circle"
+            ))
+            
+        # Add Edges
+        # Limit edges for performance if necessary
+        for l in network_data['links']:
+            edges.append(Edge(
+                source=l['source'], 
+                target=l['target'], 
+                color="#555555"
+            ))
+            
+        config = Config(
+            width=1200, 
+            height=800, 
+            directed=True,
+            physics=True, # Re-enable physics for layout
+            hierarchical=False,
+            nodeHighlightBehavior=True, 
+            highlightColor="#F7A7A6",
+            collapsible=False,
+            # Physics settings to spread nodes out (fix "Dot" issue)
+            # but stabilize quickly
+             physicsOptions={
+                "barnesHut": {
+                    "gravitationalConstant": -4000,
+                    "centralGravity": 0.3,
+                    "springLength": 95,
+                    "springConstant": 0.04,
+                    "damping": 0.09,
+                    "avoidOverlap": 0.1
+                },
+                "stabilization": {
+                    "enabled": True,
+                    "iterations": 1000,
+                    "updateInterval": 100,
+                    "onlyDynamicEdges": False,
+                    "fit": True
+                }
+            }
         )
         
-        if selected_idx is not None:
-            selected_track = df_search.iloc[selected_idx]
-            track_id = selected_track['id']
-            
-            st.divider()
-            
-            # Afficher les détails de la track
-            col1, col2 = st.columns([1, 2])
-            
-            with col1:
-                st.markdown("### 🎵 Selected Track")
-                st.markdown(f"**{selected_track['track']}**")
-                st.markdown(f"*by {selected_track['artist']}*")
-                st.metric("Popularity", f"{selected_track['popularity']}/100")
-                if selected_track.get('year'):
-                    st.metric("Year", int(selected_track['year']))
-            
-            with col2:
-                # Récupérer les détails MongoDB
-                with st.spinner("Loading track details from MongoDB..."):
-                    track_details = api.get_track_details(track_id)
-                
-                if 'error' not in track_details and track_details:
-                    st.markdown("### 📊 Audio Features")
-                    
-                    features_cols = st.columns(4)
-                    with features_cols[0]:
-                        st.metric("💃 Danceability", f"{track_details.get('danceability', 0):.3f}")
-                    with features_cols[1]:
-                        st.metric("⚡ Energy", f"{track_details.get('energy', 0):.3f}")
-                    with features_cols[2]:
-                        st.metric("😊 Valence", f"{track_details.get('valence', 0):.3f}")
-                    with features_cols[3]:
-                        st.metric("🎸 Acousticness", f"{track_details.get('acousticness', 0):.3f}")
-            
-            st.divider()
-            
-            # RECOMMANDATIONS
-            st.subheader("🎯 Recommendations")
-            
-            rec_method = st.radio(
-                "Choose recommendation method",
-                ["🔗 Graph-based (Neo4j)", "🎵 Audio Similarity (MongoDB)", "🔥 Hybrid (Both)"],
-                horizontal=True
+        # Render Graph
+        return_value = agraph(nodes=nodes, edges=edges, config=config)
+    else:
+        st.info("No direct connections found between selections yet.")
+
+# --- RESULTS SECTION ---
+if st.button("🚀 Discover Recommendations", type="primary", use_container_width=True):
+    if not selected_genres and not selected_artists:
+        st.warning("Please select at least one genre or artist.")
+    else:
+        st.divider()
+        st.subheader("3. recommended tracks")
+        
+        with st.spinner("Analyzing graph and audio features..."):
+            recommendations = api.get_recommendations_advanced(
+                selected_genres, 
+                selected_artists, 
+                selected_years if selected_years else []
             )
             
-            if st.button("Generate Recommendations", type="primary"):
-                if "Graph" in rec_method:
-                    st.markdown("#### 🔗 Graph-based Recommendations")
-                    st.info("Based on artist network and genre relationships (Neo4j)")
-                    
-                    # Simuler des recommandations basées sur le graphe
-                    # (En réalité, tu créerais un endpoint API pour ça)
-                    network = api.get_artist_network(selected_track['artist'])
-                    if network and 'error' not in network:
-                        st.write(f"Found {len(network)} related artists")
-                        # Ici tu ferais une vraie requête pour trouver des tracks populaires de ces artistes
-                
-                if "Audio" in rec_method:
-                    st.markdown("#### 🎵 Audio Similarity Recommendations")
-                    st.info("Based on audio features similarity (MongoDB)")
-                    
-                    with st.spinner("Finding similar tracks..."):
-                        similar_tracks = api.find_similar_tracks(track_id, limit=10)
-                    
-                    if 'error' not in similar_tracks and similar_tracks:
-                        st.success(f"Found {len(similar_tracks)} similar tracks")
-                        
-                        df_similar = pd.DataFrame(similar_tracks)
-                        st.dataframe(
-                            df_similar[['track_name', 'artist_name', 'danceability', 'energy', 'valence']],
-                            hide_index=True,
-                            use_container_width=True
-                        )
-                    else:
-                        st.warning("No similar tracks found")
-                
-                if "Hybrid" in rec_method:
-                    st.markdown("#### 🔥 Hybrid Recommendations")
-                    st.info("Combining graph relationships + audio similarity for best results!")
-                    
-                    col_a, col_b = st.columns(2)
-                    
-                    with col_a:
-                        st.markdown("**From Graph (Genre/Artist)**")
-                        # Ici tu combineras les deux approches
-                    
-                    with col_b:
-                        st.markdown("**From Audio Features**")
-                        similar_tracks = api.find_similar_tracks(track_id, limit=5)
-                        if similar_tracks and 'error' not in similar_tracks:
-                            for track in similar_tracks:
-                                st.write(f"🎵 {track['track_name']} - {track['artist_name']}")
-    else:
-        st.warning("No tracks found")
-
-st.divider()
-st.info("💡 **Hybrid approach** combines the power of graph traversal (relationships) with document similarity (audio features)!")
+        if recommendations and 'error' not in recommendations:
+            # Display as a nice grid
+            for i in range(0, len(recommendations), 2):
+                cols = st.columns(2)
+                for j in range(2):
+                    if i + j < len(recommendations):
+                        track = recommendations[i+j]
+                        with cols[j]:
+                            st.info(f"**{track['track']}**  \n"
+                                    f"👤 {track['artist']}  \n"
+                                    f"📅 {track.get('year', 'N/A')} | 🔥 {track['popularity']}")
+        else:
+            st.warning("No tracks found matching all criteria. Try expanding your search.")
+            
+st.markdown("---")
+st.caption("Music Knowledge Graph Engine v1.0")

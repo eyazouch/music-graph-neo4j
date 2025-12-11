@@ -58,3 +58,19 @@ async def find_similar(track_id: str, limit: int = 10):
         return mongodb_service.find_similar_by_audio(track_id, limit)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/analytics/evolution")
+async def get_audio_evolution():
+    """Evolution temporelle des features"""
+    try:
+        return mongodb_service.get_audio_evolution()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/analytics/correlations")
+async def get_feature_correlations():
+    """Données pour corrélation"""
+    try:
+        return mongodb_service.get_feature_correlation_sample()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

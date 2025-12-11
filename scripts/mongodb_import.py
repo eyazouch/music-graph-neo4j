@@ -35,10 +35,10 @@ DATA_DIR = BASE_DIR / "data" / "processed" / "mongodb"
 JSON_FILE = DATA_DIR / "audio_features.json"
 CSV_FILE = DATA_DIR / "audio_features.csv"
 
-print(f"\n📂 Data directory: {DATA_DIR}")
-print(f"🔗 MongoDB URI: {MONGO_URI}")
-print(f"💾 Database: {DATABASE_NAME}")
-print(f"📦 Collection: {COLLECTION_NAME}")
+print(f"\n[FILE] Data directory: {DATA_DIR}")
+print(f"[INFO] MongoDB URI: {MONGO_URI}")
+print(f"[INFO] Database: {DATABASE_NAME}")
+print(f"[INFO] Collection: {COLLECTION_NAME}")
 
 # ============================================================================
 # VERIFY FILES
@@ -51,18 +51,18 @@ print("="*80)
 json_exists = JSON_FILE.exists()
 csv_exists = CSV_FILE.exists()
 
-print(f"{'✅' if json_exists else '❌'} JSON file: {JSON_FILE}")
-print(f"{'✅' if csv_exists else '❌'} CSV file:  {CSV_FILE}")
+print(f"{'[OK]' if json_exists else '[FAIL]'} JSON file: {JSON_FILE}")
+print(f"{'[OK]' if csv_exists else '[FAIL]'} CSV file:  {CSV_FILE}")
 
 if not json_exists and not csv_exists:
-    print("\n❌ ERROR: No data files found!")
+    print("\n[FAIL] ERROR: No data files found!")
     print("Please run preprocess_music_data.py first")
     exit(1)
 
 # Choose file to import (prefer JSON)
 use_json = json_exists
 data_file = JSON_FILE if use_json else CSV_FILE
-print(f"\n📥 Using: {data_file.name}")
+print(f"\n[INFO] Using: {data_file.name}")
 
 # ============================================================================
 # CONNECT TO MONGODB
@@ -78,7 +78,7 @@ try:
     
     # Test connection
     client.admin.command('ping')
-    print("✅ Connected to MongoDB successfully!")
+    print("[OK] Connected to MongoDB successfully!")
     
     # Get database and collection
     db = client[DATABASE_NAME]
@@ -86,12 +86,12 @@ try:
     
     # Get server info
     server_info = client.server_info()
-    print(f"📊 MongoDB version: {server_info['version']}")
+    print(f"[INFO] MongoDB version: {server_info['version']}")
     
 except ConnectionFailure as e:
-    print(f"❌ ERROR: Cannot connect to MongoDB")
+    print(f"[FAIL] ERROR: Cannot connect to MongoDB")
     print(f"   {str(e)}")
-    print("\n💡 Make sure:")
+    print("\n[INFO] Make sure:")
     print("   1. Docker container is running: docker ps")
     print("   2. MongoDB is accessible at localhost:27017")
     exit(1)
@@ -107,21 +107,21 @@ print("="*80)
 start_load = time.time()
 
 if use_json:
-    print("📄 Loading JSON file...")
+    print("[INFO] Loading JSON file...")
     with open(JSON_FILE, 'r', encoding='utf-8') as f:
         documents = json.load(f)
-    print(f"✅ Loaded {len(documents):,} documents from JSON")
+    print(f"[OK] Loaded {len(documents):,} documents from JSON")
 else:
-    print("📄 Loading CSV file...")
+    print("[INFO] Loading CSV file...")
     df = pd.read_csv(CSV_FILE)
     documents = df.to_dict('records')
-    print(f"✅ Loaded {len(documents):,} documents from CSV")
+    print(f"[OK] Loaded {len(documents):,} documents from CSV")
 
 load_time = time.time() - start_load
-print(f"⏱️  Load time: {load_time:.2f}s")
+print(f"[TIME] Load time: {load_time:.2f}s")
 
 # Show sample document
-print("\n📋 Sample document:")
+print("\n[INFO] Sample document:")
 sample = documents[0]
 for key, value in list(sample.items())[:8]:
     print(f"   {key:.<20} {value}")
@@ -138,16 +138,16 @@ print("="*80)
 # Check if collection exists and has data
 existing_count = collection.count_documents({})
 if existing_count > 0:
-    print(f"⚠️  Collection already has {existing_count:,} documents")
-    print("🗑️  Dropping existing collection...")
+    print(f"[WARN] Collection already has {existing_count:,} documents")
+    print("[INFO] Dropping existing collection...")
     collection.drop()
-    print("✅ Collection dropped")
+    print("[OK] Collection dropped")
 
 # ============================================================================
 # CREATE INDEXES
 # ============================================================================
 
-print("\n📊 Creating indexes...")
+print("\n[INFO] Creating indexes...")
 
 indexes = [
     ("_id", 1),  # Already exists by default
@@ -161,11 +161,11 @@ indexes = [
 for field, direction in indexes[1:]:  # Skip _id
     try:
         collection.create_index([(field, direction)])
-        print(f"✅ Index on '{field}' created")
+        print(f"[OK] Index on '{field}' created")
     except Exception as e:
-        print(f"⚠️  Index on '{field}': {str(e)[:50]}")
+        print(f"[WARN] Index on '{field}': {str(e)[:50]}")
 
-print("✅ Indexes created")
+print("[OK] Indexes created")
 
 # ============================================================================
 # IMPORT DATA
@@ -182,7 +182,7 @@ batch_size = 1000
 total_batches = (len(documents) + batch_size - 1) // batch_size
 inserted_count = 0
 
-print(f"📥 Importing {len(documents):,} documents in batches of {batch_size}...")
+print(f"[INFO] Importing {len(documents):,} documents in batches of {batch_size}...")
 
 for i in range(0, len(documents), batch_size):
     batch = documents[i:i + batch_size]
@@ -196,13 +196,13 @@ for i in range(0, len(documents), batch_size):
         print(f"   Batch {current_batch}/{total_batches} | {inserted_count:,}/{len(documents):,} ({progress:.1f}%)", end='\r')
         
     except BulkWriteError as e:
-        print(f"\n⚠️  Batch {current_batch} had errors: {len(e.details['writeErrors'])} documents failed")
+        print(f"\n[WARN] Batch {current_batch} had errors: {len(e.details['writeErrors'])} documents failed")
         inserted_count += len(batch) - len(e.details['writeErrors'])
 
 print()  # New line after progress
 import_time = time.time() - start_import
 
-print(f"\n✅ Import complete!")
+print(f"\n[OK] Import complete!")
 print(f"   Inserted: {inserted_count:,} documents")
 print(f"   Time: {import_time:.2f}s")
 print(f"   Speed: {int(inserted_count/import_time):,} docs/sec")
@@ -217,12 +217,12 @@ print("="*80)
 
 # Count documents
 total_docs = collection.count_documents({})
-print(f"📊 Total documents in collection: {total_docs:,}")
+print(f"[INFO] Total documents in collection: {total_docs:,}")
 
 # Collection stats
 stats = db.command("collStats", COLLECTION_NAME)
-print(f"💾 Storage size: {stats['size'] / 1024 / 1024:.2f} MB")
-print(f"📇 Index size: {stats.get('totalIndexSize', 0) / 1024 / 1024:.2f} MB")
+print(f"[INFO] Storage size: {stats['size'] / 1024 / 1024:.2f} MB")
+print(f"[INFO] Index size: {stats.get('totalIndexSize', 0) / 1024 / 1024:.2f} MB")
 
 # Sample queries
 print("\n" + "="*80)
@@ -230,7 +230,7 @@ print("7. SAMPLE QUERIES")
 print("="*80)
 
 # Most popular tracks
-print("\n🔥 Top 5 most popular tracks:")
+print("\n[INFO] Top 5 most popular tracks:")
 results = collection.find().sort("popularity", -1).limit(5)
 for i, doc in enumerate(results, 1):
     print(f"   {i}. Track ID: {doc['_id']}")
@@ -238,7 +238,7 @@ for i, doc in enumerate(results, 1):
     print(f"      Danceability: {doc['danceability']:.3f}, Energy: {doc['energy']:.3f}")
 
 # Most danceable tracks
-print("\n💃 Top 5 most danceable tracks:")
+print("\n[INFO] Top 5 most danceable tracks:")
 results = collection.find().sort("danceability", -1).limit(5)
 for i, doc in enumerate(results, 1):
     print(f"   {i}. Track ID: {doc['_id']}")
@@ -246,7 +246,7 @@ for i, doc in enumerate(results, 1):
     print(f"      Energy: {doc['energy']:.3f}, Valence: {doc['valence']:.3f}")
 
 # Most energetic tracks
-print("\n⚡ Top 5 most energetic tracks:")
+print("\n[INFO] Top 5 most energetic tracks:")
 results = collection.find().sort("energy", -1).limit(5)
 for i, doc in enumerate(results, 1):
     print(f"   {i}. Track ID: {doc['_id']}")
@@ -254,7 +254,7 @@ for i, doc in enumerate(results, 1):
     print(f"      Loudness: {doc['loudness']:.2f} dB")
 
 # Average audio features
-print("\n📊 Average audio features:")
+print("\n[INFO] Average audio features:")
 pipeline = [
     {
         "$group": {
@@ -275,7 +275,7 @@ print(f"   Tempo:        {result['avg_tempo']:.1f} BPM")
 print(f"   Popularity:   {result['avg_popularity']:.1f}")
 
 # Distribution by decade
-print("\n📅 Tracks by decade:")
+print("\n[INFO] Tracks by decade:")
 pipeline = [
     {
         "$group": {
@@ -297,21 +297,21 @@ for doc in results:
 # ============================================================================
 
 print("\n" + "="*80)
-print("✅ MONGODB IMPORT COMPLETE!")
+print("[OK] MONGODB IMPORT COMPLETE!")
 print("="*80)
 
-print(f"\n📊 Summary:")
+print(f"\n[INFO] Summary:")
 print(f"   Database:    {DATABASE_NAME}")
 print(f"   Collection:  {COLLECTION_NAME}")
 print(f"   Documents:   {total_docs:,}")
 print(f"   Import time: {import_time:.2f}s")
 
-print("\n🎯 Next steps:")
+print("\n[INFO] Next steps:")
 print("   1. Verify in MongoDB Compass: mongodb://localhost:27017")
 print("   2. Test aggregation queries")
 print("   3. Build recommendation API")
 
-print("\n💡 Access MongoDB:")
+print("\n[INFO] Access MongoDB:")
 print(f"   URI: {MONGO_URI}")
 print(f"   Database: {DATABASE_NAME}")
 print(f"   Collection: {COLLECTION_NAME}")

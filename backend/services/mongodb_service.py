@@ -9,7 +9,7 @@ class MongoDBService:
     def __init__(self):
         self.client = MongoClient(settings.MONGODB_URI)
         self.db = self.client[settings.MONGODB_DB]
-        self.tracks = self.db.tracks
+        self.tracks = self.db.audio_features # Fixed collection name
     
     def close(self):
         self.client.close()
@@ -86,6 +86,7 @@ class MongoDBService:
                 "$project": {
                     "track_name": 1,
                     "artist_name": 1,
+                    "danceability": 1,
                     "energy": 1,
                     "valence": 1,
                     "popularity": 1,
@@ -181,6 +182,62 @@ class MongoDBService:
             }
         ]
         return list(self.tracks.aggregate(pipeline))
+
+    def get_audio_evolution(self) -> List[Dict[str, Any]]:
+        """Evolution des caractéristiques audio par année"""
+        try:
+            pipeline = [
+                {
+                    "$match": {
+                        "year": {"$gte": 1960, "$lte": 2023}
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": "$year",
+                        "avg_danceability": {"$avg": "$danceability"},
+                        "avg_energy": {"$avg": "$energy"},
+                        "avg_valence": {"$avg": "$valence"},
+                        "avg_acousticness": {"$avg": "$acousticness"},
+                        "avg_loudness": {"$avg": "$loudness"},
+                        "count": {"$sum": 1}
+                    }
+                },
+                {
+                    "$sort": {"_id": 1}
+                }
+            ]
+            return list(self.tracks.aggregate(pipeline))
+        except Exception as e:
+            print(f"Error in get_audio_evolution: {e}")
+            return []
+
+    def get_feature_correlation_sample(self, size: int = 2000) -> List[Dict[str, Any]]:
+        """Echantillon pour matrice de corrélation"""
+        try:
+            pipeline = [
+                {
+                    "$project": {
+                        "_id": 0,
+                        "danceability": 1,
+                        "energy": 1,
+                        "valence": 1,
+                        "acousticness": 1,
+                        "instrumentalness": 1,
+                        "liveness": 1,
+                        "speechiness": 1,
+                        "loudness": 1,
+                        "popularity": 1
+                    }
+                },
+                {
+                    "$sample": {"size": size}
+                }
+            ]
+            return list(self.tracks.aggregate(pipeline))
+        except Exception as e:
+            print(f"Error in get_feature_correlation_sample: {e}")
+            return []
 
 # Instance globale
 mongodb_service = MongoDBService()

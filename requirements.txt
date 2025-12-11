@@ -18,7 +18,7 @@ pydantic-settings>=2.1.0   # Settings management (IMPORTANT!)
 python-multipart>=0.0.6    # File uploads support
 
 # --- Frontend (Streamlit) ---
-streamlit>=1.30.0          # Dashboard framework
+streamlit>=1.40.0          # Dashboard framework (Changed for st.pills support)
 streamlit-agraph>=0.0.45   # Graph visualizations
 streamlit-option-menu>=0.3.6  # Enhanced sidebar
 
