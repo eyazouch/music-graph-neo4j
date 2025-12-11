@@ -36,11 +36,7 @@ neo4j_data/
 neo4j_logs/
 mongo_data/
 
-# Data files (too large)
-data/raw/*
-!data/raw/.gitkeep
-data/processed/*
-!data/processed/.gitkeep
+
 
 # Logs
 logs/*.log

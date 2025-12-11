@@ -1,0 +1,39 @@
+{
+  "preprocessing_info": {
+    "input_file": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\raw\\ClassicHit.csv",
+    "total_tracks_processed": 15149,
+    "preprocessing_steps": [
+      "Removed duplicates",
+      "Normalized text (tracks, artists, genres)",
+      "Created unique IDs (track_id, artist_id, genre_id)",
+      "Prepared Neo4j nodes and relationships",
+      "Prepared MongoDB documents"
+    ]
+  },
+  "statistics": {
+    "total_tracks": 15149,
+    "unique_artists": 3083,
+    "unique_genres": 19,
+    "year_range": "1899 - 2024",
+    "avg_popularity": 43.02,
+    "neo4j_nodes": 18062,
+    "neo4j_relationships": 33503,
+    "mongodb_documents": 15149
+  },
+  "neo4j_files": {
+    "nodes": {
+      "tracks": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\tracks.csv",
+      "artists": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\artists.csv",
+      "genres": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\genres.csv"
+    },
+    "relationships": {
+      "performed_by": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\performed_by.csv",
+      "has_genre": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\has_genre.csv",
+      "performs": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\performs.csv"
+    }
+  },
+  "mongodb_files": {
+    "csv": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\processed\\mongodb\\audio_features.csv",
+    "json": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\processed\\mongodb\\audio_features.json"
+  }
+}
