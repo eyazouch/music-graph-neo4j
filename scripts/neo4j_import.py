@@ -26,7 +26,10 @@ NEO4J_USER = "neo4j"
 NEO4J_PASSWORD = "password123"  # Your Neo4j password
 
 # Data files
-DATA_DIR = Path(r"C:\Users\Eya\Desktop\music-graph-neo4j\data\processed\neo4j")
+# Data files
+# Use relative path from this script location
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data" / "processed" / "neo4j"
 
 FILES = {
     'tracks': DATA_DIR / "tracks.csv",

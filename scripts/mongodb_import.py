@@ -28,7 +28,10 @@ DATABASE_NAME = "music_recommendation"
 COLLECTION_NAME = "audio_features"
 
 # Data files
-DATA_DIR = Path(r"C:\Users\Eya\Desktop\music-graph-neo4j\data\processed\mongodb")
+# Data files
+# Use relative path from this script location
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data" / "processed" / "mongodb"
 JSON_FILE = DATA_DIR / "audio_features.json"
 CSV_FILE = DATA_DIR / "audio_features.csv"
 

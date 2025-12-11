@@ -16,46 +16,57 @@ class Neo4jService:
         self.driver.close()
     
     def get_stats(self) -> Dict[str, int]:
-        """Statistiques de la base Neo4j"""
-        with self.driver.session() as session:
-            result = session.run("""
-                MATCH (t:Track) WITH count(t) as tracks
-                MATCH (a:Artist) WITH tracks, count(a) as artists
-                MATCH (g:Genre) WITH tracks, artists, count(g) as genres
-                MATCH ()-[r]->() 
-                RETURN tracks, artists, genres, count(r) as relationships
-            """)
-            record = result.single()
-            return {
-                "tracks": record["tracks"],
-                "artists": record["artists"],
-                "genres": record["genres"],
-                "relationships": record["relationships"]
-            }
+        try:
+            with self.driver.session() as session:
+                result = session.run("""
+                    MATCH (t:Track) WITH count(t) as tracks
+                    MATCH (a:Artist) WITH tracks, count(a) as artists
+                    MATCH (g:Genre) WITH tracks, artists, count(g) as genres
+                    MATCH ()-[r]->() 
+                    RETURN tracks, artists, genres, count(r) as relationships
+                """)
+                record = result.single()
+                return {
+                    "tracks": record["tracks"],
+                    "artists": record["artists"],
+                    "genres": record["genres"],
+                    "relationships": record["relationships"]
+                }
+        except Exception as e:
+            print(f"Neo4j Error (get_stats): {e}")
+            return {"tracks": 0, "artists": 0, "genres": 0, "relationships": 0, "error": str(e)}
     
     def get_top_genres(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Top genres par nombre de tracks"""
-        with self.driver.session() as session:
-            result = session.run("""
-                MATCH (t:Track)-[:HAS_GENRE]->(g:Genre)
-                RETURN g.name as genre, count(t) as track_count
-                ORDER BY track_count DESC
-                LIMIT $limit
-            """, limit=limit)
-            return [dict(record) for record in result]
+        try:
+            with self.driver.session() as session:
+                result = session.run("""
+                    MATCH (t:Track)-[:HAS_GENRE]->(g:Genre)
+                    RETURN g.name as genre, count(t) as track_count
+                    ORDER BY track_count DESC
+                    LIMIT $limit
+                """, limit=limit)
+                return [dict(record) for record in result]
+        except Exception as e:
+            print(f"Neo4j Error (get_top_genres): {e}")
+            return []
     
     def get_top_artists(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Top artistes par popularité moyenne"""
-        with self.driver.session() as session:
-            result = session.run("""
-                MATCH (a:Artist)<-[:PERFORMED_BY]-(t:Track)
-                RETURN a.name as artist, 
-                       count(t) as track_count,
-                       avg(t.popularity) as avg_popularity
-                ORDER BY avg_popularity DESC
-                LIMIT $limit
-            """, limit=limit)
-            return [dict(record) for record in result]
+        try:
+            with self.driver.session() as session:
+                result = session.run("""
+                    MATCH (a:Artist)<-[:PERFORMED_BY]-(t:Track)
+                    RETURN a.name as artist, 
+                           count(t) as track_count,
+                           avg(t.popularity) as avg_popularity
+                    ORDER BY avg_popularity DESC
+                    LIMIT $limit
+                """, limit=limit)
+                return [dict(record) for record in result]
+        except Exception as e:
+            print(f"Neo4j Error (get_top_artists): {e}")
+            return []
     
     def get_artist_network(self, artist_name: str, depth: int = 2) -> Dict[str, Any]:
         """Réseau de collaboration d'un artiste (via genres communs)"""
@@ -88,16 +99,20 @@ class Neo4jService:
     
     def get_genre_evolution(self) -> List[Dict[str, Any]]:
         """Évolution des genres par année"""
-        with self.driver.session() as session:
-            result = session.run("""
-                MATCH (t:Track)-[:HAS_GENRE]->(g:Genre)
-                WHERE t.year IS NOT NULL
-                WITH g.name as genre, t.year as year, count(t) as tracks
-                WHERE year >= 2000 AND year <= 2023
-                RETURN genre, year, tracks
-                ORDER BY year, tracks DESC
-            """)
-            return [dict(record) for record in result]
+        try:
+            with self.driver.session() as session:
+                result = session.run("""
+                    MATCH (t:Track)-[:HAS_GENRE]->(g:Genre)
+                    WHERE t.year IS NOT NULL
+                    WITH g.name as genre, t.year as year, count(t) as tracks
+                    WHERE year >= 2000 AND year <= 2023
+                    RETURN genre, year, tracks
+                    ORDER BY year, tracks DESC
+                """)
+                return [dict(record) for record in result]
+        except Exception as e:
+            print(f"Neo4j Error (get_genre_evolution): {e}")
+            return []
 
 # Instance globale
 neo4j_service = Neo4jService()

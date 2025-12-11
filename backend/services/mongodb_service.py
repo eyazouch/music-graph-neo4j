@@ -16,11 +16,15 @@ class MongoDBService:
     
     def get_stats(self) -> Dict[str, Any]:
         """Statistiques MongoDB"""
-        return {
-            "total_tracks": self.tracks.count_documents({}),
-            "database_size": self.db.command("dbStats")["dataSize"],
-            "collections": self.db.list_collection_names()
-        }
+        try:
+            return {
+                "total_tracks": self.tracks.count_documents({}),
+                "database_size": self.db.command("dbStats")["dataSize"],
+                "collections": self.db.list_collection_names()
+            }
+        except Exception as e:
+            print(f"Error getting MongoDB stats: {e}")
+            return {"error": str(e)}
     
     def get_audio_features_distribution(self) -> Dict[str, Any]:
         """Distribution des audio features (pour visualisation créative)"""
@@ -43,32 +47,37 @@ class MongoDBService:
     
     def get_genre_audio_profiles(self) -> List[Dict[str, Any]]:
         """Profil audio moyen par genre (MongoDB aggregation)"""
-        pipeline = [
-            {
-                "$unwind": "$genres"
-            },
-            {
-                "$group": {
-                    "_id": "$genres",
-                    "danceability": {"$avg": "$danceability"},
-                    "energy": {"$avg": "$energy"},
-                    "valence": {"$avg": "$valence"},
-                    "acousticness": {"$avg": "$acousticness"},
-                    "tempo": {"$avg": "$tempo"},
-                    "track_count": {"$sum": 1}
+        try:
+            pipeline = [
+                {
+                    "$unwind": "$genres"
+                },
+                {
+                    "$group": {
+                        "_id": "$genres",
+                        "danceability": {"$avg": "$danceability"},
+                        "energy": {"$avg": "$energy"},
+                        "valence": {"$avg": "$valence"},
+                        "acousticness": {"$avg": "$acousticness"},
+                        "tempo": {"$avg": "$tempo"},
+                        "track_count": {"$sum": 1}
+                    }
+                },
+                {
+                    "$match": {"track_count": {"$gte": 50}}
+                },
+                {
+                    "$sort": {"track_count": -1}
+                },
+                {
+                    "$limit": 15
                 }
-            },
-            {
-                "$match": {"track_count": {"$gte": 50}}
-            },
-            {
-                "$sort": {"track_count": -1}
-            },
-            {
-                "$limit": 15
-            }
-        ]
-        return list(self.tracks.aggregate(pipeline))
+            ]
+            return list(self.tracks.aggregate(pipeline))
+        except Exception as e:
+            print(f"Error in get_genre_audio_profiles: {e}")
+            # Return empty list instead of crashing, handling the missing 'genres' field case
+            return []
     
     def get_energy_valence_clusters(self) -> List[Dict[str, Any]]:
         """Clusters énergie x valence (mood mapping)"""

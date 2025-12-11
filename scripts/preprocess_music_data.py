@@ -20,11 +20,14 @@ print("="*80)
 # CONFIGURATION
 # ============================================================================
 
+# Base directory
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 # Input
-INPUT_FILE = r"C:\Users\Eya\Desktop\music-graph-neo4j\data\raw\ClassicHit.csv"
+INPUT_FILE = BASE_DIR / "data" / "raw" / "ClassicHit.csv"
 
 # Output directories
-OUTPUT_DIR = Path(r"C:\Users\Eya\Desktop\music-graph-neo4j\data\processed")
+OUTPUT_DIR = BASE_DIR / "data" / "processed"
 NEO4J_DIR = OUTPUT_DIR / "neo4j"
 MONGODB_DIR = OUTPUT_DIR / "mongodb"
 

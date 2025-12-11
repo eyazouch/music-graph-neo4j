@@ -121,7 +121,7 @@ with tab4:
         st.markdown("### 🎸 Top Genres")
         top_genres = api.get_top_genres(limit=15)
         
-        if 'error' not in top_genres:
+        if 'error' not in top_genres and top_genres:
             df_genres = pd.DataFrame(top_genres)
             
             import plotly.express as px
@@ -136,6 +136,8 @@ with tab4:
             )
             fig.update_layout(yaxis={'categoryorder': 'total ascending'}, height=500)
             st.plotly_chart(fig, use_container_width=True)
+        elif not top_genres:
+             st.warning("No genres found")
         else:
             st.error("Failed to load top genres")
     
@@ -143,7 +145,7 @@ with tab4:
         st.markdown("### 🎤 Top Artists")
         top_artists = api.get_top_artists(limit=15)
         
-        if 'error' not in top_artists:
+        if 'error' not in top_artists and top_artists:
             df_artists = pd.DataFrame(top_artists)
             
             fig = px.bar(
@@ -158,6 +160,8 @@ with tab4:
             )
             fig.update_layout(yaxis={'categoryorder': 'total ascending'}, height=500)
             st.plotly_chart(fig, use_container_width=True)
+        elif not top_artists:
+             st.warning("No artists found")
         else:
             st.error("Failed to load top artists")
 

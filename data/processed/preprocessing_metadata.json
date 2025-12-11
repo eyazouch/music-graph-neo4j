@@ -1,6 +1,6 @@
 {
   "preprocessing_info": {
-    "input_file": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\raw\\ClassicHit.csv",
+    "input_file": "C:\\Users\\AHMED\\OneDrive\\Desktop\\music-graph-neo4j\\data\\raw\\ClassicHit.csv",
     "total_tracks_processed": 15149,
     "preprocessing_steps": [
       "Removed duplicates",
@@ -22,18 +22,18 @@
   },
   "neo4j_files": {
     "nodes": {
-      "tracks": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\tracks.csv",
-      "artists": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\artists.csv",
-      "genres": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\genres.csv"
+      "tracks": "C:\\Users\\AHMED\\OneDrive\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\tracks.csv",
+      "artists": "C:\\Users\\AHMED\\OneDrive\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\artists.csv",
+      "genres": "C:\\Users\\AHMED\\OneDrive\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\genres.csv"
     },
     "relationships": {
-      "performed_by": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\performed_by.csv",
-      "has_genre": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\has_genre.csv",
-      "performs": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\performs.csv"
+      "performed_by": "C:\\Users\\AHMED\\OneDrive\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\performed_by.csv",
+      "has_genre": "C:\\Users\\AHMED\\OneDrive\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\has_genre.csv",
+      "performs": "C:\\Users\\AHMED\\OneDrive\\Desktop\\music-graph-neo4j\\data\\processed\\neo4j\\performs.csv"
     }
   },
   "mongodb_files": {
-    "csv": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\processed\\mongodb\\audio_features.csv",
-    "json": "C:\\Users\\Eya\\Desktop\\music-graph-neo4j\\data\\processed\\mongodb\\audio_features.json"
+    "csv": "C:\\Users\\AHMED\\OneDrive\\Desktop\\music-graph-neo4j\\data\\processed\\mongodb\\audio_features.csv",
+    "json": "C:\\Users\\AHMED\\OneDrive\\Desktop\\music-graph-neo4j\\data\\processed\\mongodb\\audio_features.json"
   }
 }

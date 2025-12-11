@@ -167,9 +167,11 @@ def create_network_graph(network_data: List[Dict], center_artist: str):
     node_names = [center_artist]
     node_colors = ['#1DB954']
     
-    # Positions circulaires pour les autres
-    for i, node in enumerate(node_list[1:], 1):
-        angle = 2 * math.pi * i / (n - 1)
+    # Positions circulaires pour les autres (exclure l'artiste principal de la liste des autres)
+    other_nodes = [n for n in node_list if n != center_artist]
+
+    for i, node in enumerate(other_nodes, 1):
+        angle = 2 * math.pi * i / len(other_nodes) if other_nodes else 0
         node_x.append(math.cos(angle))
         node_y.append(math.sin(angle))
         node_names.append(node)

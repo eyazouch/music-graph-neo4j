@@ -15,7 +15,10 @@ class APIClient:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            return {"error": str(e)}
+            error_msg = f"Connection error: {str(e)}"
+            if "Connection refused" in str(e):
+                error_msg += " (Is the backend running on http://localhost:8000?)"
+            return {"error": error_msg}
     
     # Neo4j endpoints
     def get_neo4j_stats(self) -> Dict:
