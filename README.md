@@ -1,95 +1,95 @@
-# Music Graph Recommendation System
+# Music Graph
 
-A hybrid music recommendation system combining Neo4j (Graph Database) and MongoDB (Document Database) to provide personalized track recommendations and analytics.
+Système de recommandation musicale hybride qui combine une base orientée graphe (Neo4j) et une base orientée documents (MongoDB).
 
----
+Neo4j modélise les relations entre morceaux, artistes et genres pour les recommandations et l'exploration du réseau d'artistes. MongoDB stocke les caractéristiques audio des morceaux (énergie, tempo, valence, etc.) pour les analyses statistiques et la recherche de morceaux similaires.
 
-## 🚀 How to Run & Fixes Applied
+## Architecture
 
-### ✅ Fixes Applied
-1.  **Backend (`backend/services/mongodb_service.py`)**:
-    -   Modified `get_genre_audio_profiles` to be robust against missing data. It now wraps the aggregation in a try/except block and handles cases where the `genres` field might be missing in MongoDB documents (returning an empty list instead of crashing).
-    -   Wrapped `get_stats` in error handling to prevent the dashboard from breaking if MongoDB is down.
-2.  **Frontend (`frontend/utils/api_client.py`)**:
-    -   Improved error messages. If the connection is refused, it now explicitly suggests ensuring the backend is running on `http://localhost:8000`.
-
-## 🏃 How to Run the Project
-
-### 1. Prerequisites
-Ensure you have Docker running and Python installed.
-
-### 2. Start Databases (Docker)
-Open a terminal in the project root (`music-graph-neo4j`) and run:
-```bash
-docker-compose up -d
 ```
-Verify they are running:
-```bash
-docker ps
+Streamlit (frontend)  ->  FastAPI (backend)  ->  Neo4j    : graphe Track / Artist / Genre
+                                             ->  MongoDB  : caractéristiques audio
 ```
 
-### 3. Setup Python Environment
-If you haven't already:
+| Composant | Technologies |
+|---|---|
+| Bases de données | Neo4j 5.15 (APOC, Graph Data Science), MongoDB 7 |
+| API | Python, FastAPI, Uvicorn, Pydantic |
+| Interface | Streamlit, Plotly, streamlit-agraph |
+| Préparation des données | Pandas, NumPy, Jupyter |
+
+### Modèle de graphe
+
+- Nœuds : `Track`, `Artist`, `Genre`
+- Relations : `PERFORMED_BY` (morceau vers artiste), `HAS_GENRE` (morceau vers genre), `PERFORMS` (artiste vers genre)
+
+## Fonctionnalités
+
+- Exploration du graphe : recherche d'artistes, réseau d'un artiste, top genres et top artistes
+- Recommandations à partir d'une sélection de genres et d'artistes
+- Analyses audio : distributions, profils par genre, clusters d'humeur, corrélations, évolution dans le temps
+- Recherche de morceaux similaires à partir de leurs caractéristiques audio
+
+## Structure du dépôt
+
+```
+backend/     API FastAPI (routes Neo4j et MongoDB, services d'accès aux bases)
+frontend/    Tableau de bord Streamlit (exploration, analyses, recommandations)
+scripts/     Prétraitement du jeu de données et import dans Neo4j et MongoDB
+data/        Données prétraitées prêtes à l'import
+notebooks/   Exploration initiale du jeu de données
+docs/        Notes de mise en place de l'infrastructure
+```
+
+## Installation
+
+### Prérequis
+
+- Docker et Docker Compose
+- Python 3.10 ou plus récent
+
+### 1. Lancer les bases de données
+
+```bash
+docker compose up -d
+```
+
+### 2. Installer les dépendances Python
+
 ```bash
 python -m venv venv
-# Windows:
-venv\Scripts\activate
-# Mac/Linux:
-source venv/bin/activate
-
+venv\Scripts\activate          # Windows
+source venv/bin/activate       # macOS / Linux
 pip install -r requirements.txt
 ```
 
-### 4. **CRITICAL: Import Data**
-Your database is currently empty, which is why you see errors like "Failed to load evolution data". Run these scripts in order:
+### 3. Importer les données
+
+Les fichiers prétraités sont fournis dans `data/processed/`. Pour les régénérer à partir du jeu de données brut, placer `ClassicHit.csv` dans `data/raw/` puis lancer `python scripts/preprocess_music_data.py`.
 
 ```bash
-# 1. Prepare data
-python scripts/preprocess_music_data.py
-
-# 2. Import into Neo4j
 python scripts/neo4j_import.py
-
-# 3. Import into MongoDB
 python scripts/mongodb_import.py
 ```
 
-**⚠️ TROUBLESHOOTING:**
-If you see "ModuleNotFoundError", your terminal is deviating from the virtual environment. **Run these commands instead:**
-```powershell
-venv\Scripts\python scripts/neo4j_import.py
-venv\Scripts/python scripts/mongodb_import.py
-```
+### 4. Lancer l'API et l'interface
 
-### 5. Run the Backend
-Open a **new terminal**, ensure you are in the project root, and run:
-```powershell
-# Go to backend directory
+```bash
 cd backend
-
-# Run with explicit python path to avoid "command not found" errors
-..\venv\Scripts\python -m uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8000
 ```
-*It should say: `Uvicorn running on http://127.0.0.1:8000`*
 
-### 5. Run the Frontend
-Open a **third terminal**, activate the venv, and run:
 ```bash
 cd frontend
-python -m streamlit run app.py --server.port 8501
+streamlit run app.py --server.port 8501
 ```
 
-**⚠️ TROUBLESHOOTING:**
-If you see "No module named streamlit", your terminal is not using the virtual environment. **Run this command instead:**
-```powershell
-..\venv\Scripts\python -m streamlit run app.py --server.port 8501
-```
+| Service | Adresse |
+|---|---|
+| Tableau de bord | http://localhost:8501 |
+| Documentation de l'API | http://localhost:8000/docs |
+| Neo4j Browser | http://localhost:7474 (`neo4j` / `password123`, configuration locale uniquement) |
 
-### 6. Access
--   **Dashboard**: [http://localhost:8501](http://localhost:8501)
--   **API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
--   **Neo4j Browser**: [http://localhost:7474](http://localhost:7474) (user: `neo4j`, pass: `password123`)
+## Limites connues
 
-## ⚠️ Important Note on Data
-The "Genre Profiles" feature in the dashboard relies on a `genres` field in MongoDB. Based on the project summary, this field might not be present in the MongoDB documents (only in Neo4j).
--   If the charts for Genre Profiles are empty, this is expected behavior due to the data schema. The changes I made ensure the app **will not crash** because of this.
+Les profils audio par genre reposent sur un champ `genres` qui n'est présent que dans Neo4j. Si ce champ est absent des documents MongoDB, les graphiques correspondants restent vides ; l'API renvoie alors une liste vide au lieu d'une erreur.

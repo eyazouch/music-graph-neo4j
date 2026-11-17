@@ -58,3 +58,5 @@ desktop.ini
 *.tmp
 *.bak
 *.cache
+# Fichiers Anaconda Navigator
+anaconda_projects/
